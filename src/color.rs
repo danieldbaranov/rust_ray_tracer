@@ -15,18 +15,29 @@ pub fn write_color(vec: Vector3<f32>) -> [u8; 4]{
 pub fn ray_color(r: Ray) -> Vector3<f32>{
     let t = hit_sphere(Vector3::new(0., 0., -1.), 0.5, &r);
     if t > 0. {
-        let n = unit_vector(r.at(t) - Vector3::new(0., 0., -1.));
+        let n = (r.at(t) - Vector3::new(0., 0., -1.)).unit_vector();
         return 0.5 * Vector3::new(n.x + 1., n.y + 1., n.z + 1.);
     }
-    let unit_direction: Vector3<f32> = unit_vector(r.dir);
+    let unit_direction: Vector3<f32> = r.dir.unit_vector();
     let t: f32 = 0.5 * (unit_direction.y + 1.);
     return (1. - t) * Vector3::new(1., 1., 1.) + t * Vector3::new(0.5, 0.7, 1.0);
 }
 
-pub fn unit_vector(v: Vector3<f32>) -> Vector3<f32>{
-    let mag: f32 = (v.x.pow(2.) + v.y.pow(2.) + v.z.pow(2.)).sqrt();
-    return v / mag;
+pub trait VectorTraits {
+    fn unit_vector(&self) -> Vector3<f32>;
+    fn length_squared(&self) -> f32;
 }
+
+impl VectorTraits for Vector3<f32> {
+    fn unit_vector(&self) -> Vector3<f32>{
+        let mag: f32 = self.length_squared().sqrt();
+        return self / mag;
+    }
+    fn length_squared(&self) -> f32 {
+        return self.x.pow(2.) + self.y.pow(2.) + self.z.pow(2.);
+    }
+}
+
 
 pub struct Ray{
     orig: Vector3<f32>,
@@ -48,13 +59,13 @@ impl Ray {
 
 fn hit_sphere(center: Vector3<f32>, radius: f32, r: &Ray) -> f32 {
     let oc = r.orig - center;
-    let a = dot(r.dir, r.dir);
-    let b = 2. * dot(oc, r.dir);
-    let c = dot(oc, oc) - radius * radius;
-    let discriminant = b * b - 4. * a * c;
+    let a = r.dir.length_squared();
+    let half_b = dot(oc, r.dir);
+    let c = oc.length_squared() - radius.pow(2.);
+    let discriminant = half_b.pow(2.) - a * c;
     return if discriminant < 0. {
         -1.
     } else {
-        (-b - discriminant.sqrt()) / (2. * a)
+        (-half_b - discriminant.sqrt()) / a
     }
 }
